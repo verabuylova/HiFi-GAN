@@ -41,15 +41,28 @@ class LJspeechDataset(BaseDataset):
         shutil.rmtree(str(self._data_dir / "LJSpeech-1.1"))
 
         files = [file_name for file_name in (self._data_dir / "wavs").iterdir()]
-        train_length = int(0.85 * len(files)) # hand split, test ~ 15% 
+
+        from random import shuffle
+        shuffle(files)
+
+        total_files = len(files)
+        train_length = int(0.8 * total_files)
+        val_length = int(0.1 * total_files)
+
         (self._data_dir / "train").mkdir(exist_ok=True, parents=True)
+        (self._data_dir / "val").mkdir(exist_ok=True, parents=True)
         (self._data_dir / "test").mkdir(exist_ok=True, parents=True)
-        for i, fpath in enumerate((self._data_dir / "wavs").iterdir()):
+
+        for i, fpath in enumerate(files):
             if i < train_length:
                 shutil.move(str(fpath), str(self._data_dir / "train" / fpath.name))
+            elif i < train_length + val_length:
+                shutil.move(str(fpath), str(self._data_dir / "val" / fpath.name))
             else:
                 shutil.move(str(fpath), str(self._data_dir / "test" / fpath.name))
+
         shutil.rmtree(str(self._data_dir / "wavs"))
+
 
 
     def _get_or_load_index(self, part):
@@ -76,8 +89,7 @@ class LJspeechDataset(BaseDataset):
 
         mel_spectrogram = MelSpectrogram(MelSpectrogramConfig())
 
-
-        for wav_dir in tqdm(list(wav_dirs), desc=f"Preparing ljspeech folders: {part}"):
+        for wav_dir in tqdm(list(wav_dirs), desc=f"Preparing LJSpeech folders: {part}"):
             wav_dir = Path(wav_dir)
             trans_path = list(self._data_dir.glob("*.csv"))[0]
 
@@ -86,20 +98,15 @@ class LJspeechDataset(BaseDataset):
                     w_id = line.split('|')[0]
                     wav_path = wav_dir / f"{w_id}.wav"
 
-                    if not wav_path.exists():
+                    if not wav_path.exists(): 
                         continue
 
                     wav, _ = torchaudio.load(wav_path)
                     spec = mel_spectrogram(wav).squeeze(1)
 
-                    t_info = torchaudio.info(str(wav_path))
-                    length = t_info.num_frames / t_info.sample_rate
-
-                    index.append(
-                        {
-                            "wav": wav,
-                            "spec": spec
-                        }
-                    )
+                    index.append({
+                        "wav": wav,
+                        "spec": spec
+                    })
 
         return index
