@@ -8,6 +8,9 @@ pandas
 wandb
 comet_ml
 hydra-core
+librosa
+torchaudio
+speechbrain
 
 black
 isort
