@@ -1,0 +1,15 @@
+train:
+  _target_: src.datasets.LJspeechDatasetDataset
+  part: "train"
+  limit: 10
+  instance_transforms: ${transforms.instance_transforms.train}
+val:
+  _target_: src.datasets.LJspeechDatasetDataset
+  part: "val"
+  limit: 10
+  instance_transforms: ${transforms.instance_transforms.inference}
+test:
+  _target_: src.datasets.LJspeechDatasetDataset
+  part: "test"
+  limit: 10
+  instance_transforms: ${transforms.instance_transforms.inference}
