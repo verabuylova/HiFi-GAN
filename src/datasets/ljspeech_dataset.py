@@ -2,16 +2,13 @@ import json
 import logging
 import os
 import shutil
-from curses.ascii import isascii
 from pathlib import Path
 
 import torchaudio
 from src.datasets.base_dataset import BaseDataset
-from src.utils import ROOT_PATH
+from src.utils.io_utils import ROOT_PATH
 from speechbrain.utils.data_utils import download_file
 from tqdm import tqdm
-
-from src.model.melspectrogram import MelSpectrogram, MelSpectrogramConfig
 
 logger = logging.getLogger(__name__)
 
@@ -41,28 +38,15 @@ class LJspeechDataset(BaseDataset):
         shutil.rmtree(str(self._data_dir / "LJSpeech-1.1"))
 
         files = [file_name for file_name in (self._data_dir / "wavs").iterdir()]
-
-        from random import shuffle
-        shuffle(files)
-
-        total_files = len(files)
-        train_length = int(0.8 * total_files)
-        val_length = int(0.1 * total_files)
-
+        train_length = int(0.85 * len(files)) # hand split, test ~ 15% 
         (self._data_dir / "train").mkdir(exist_ok=True, parents=True)
-        (self._data_dir / "val").mkdir(exist_ok=True, parents=True)
         (self._data_dir / "test").mkdir(exist_ok=True, parents=True)
-
-        for i, fpath in enumerate(files):
+        for i, fpath in enumerate((self._data_dir / "wavs").iterdir()):
             if i < train_length:
                 shutil.move(str(fpath), str(self._data_dir / "train" / fpath.name))
-            elif i < train_length + val_length:
-                shutil.move(str(fpath), str(self._data_dir / "val" / fpath.name))
             else:
                 shutil.move(str(fpath), str(self._data_dir / "test" / fpath.name))
-
         shutil.rmtree(str(self._data_dir / "wavs"))
-
 
 
     def _get_or_load_index(self, part):
@@ -86,27 +70,23 @@ class LJspeechDataset(BaseDataset):
         for dirpath, dirnames, filenames in os.walk(str(split_dir)):
             if any([f.endswith(".wav") for f in filenames]):
                 wav_dirs.add(dirpath)
-
-        mel_spectrogram = MelSpectrogram(MelSpectrogramConfig())
-
-        for wav_dir in tqdm(list(wav_dirs), desc=f"Preparing LJSpeech folders: {part}"):
+        for wav_dir in tqdm(
+                list(wav_dirs), desc=f"Preparing ljspeech folders: {part}"
+        ):
             wav_dir = Path(wav_dir)
             trans_path = list(self._data_dir.glob("*.csv"))[0]
-
             with trans_path.open() as f:
                 for line in f:
                     w_id = line.split('|')[0]
                     wav_path = wav_dir / f"{w_id}.wav"
-
-                    if not wav_path.exists(): 
+                    if not wav_path.exists(): # elem in another part
                         continue
-
-                    wav, _ = torchaudio.load(wav_path)
-                    spec = mel_spectrogram(wav).squeeze(1)
-
-                    index.append({
-                        "wav": wav,
-                        "spec": spec
-                    })
-
+                    t_info = torchaudio.info(str(wav_path))
+                    length = t_info.num_frames / t_info.sample_rate
+                    index.append(
+                        {
+                            "path": str(wav_path.absolute().resolve()),
+                            "audio_len": length
+                        }
+                    )
         return index

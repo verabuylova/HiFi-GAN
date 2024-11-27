@@ -1,4 +1,5 @@
 import torch
+from torch.nn.utils.rnn import pad_sequence
 
 def collate_fn(dataset_items: list[dict]):
     """
@@ -12,7 +13,13 @@ def collate_fn(dataset_items: list[dict]):
         result_batch (dict[Tensor]): dict, containing batch-version
             of the tensors.
     """
-    wavs = torch.stack([item["wav"] for item in dataset_items])
-    specs = torch.stack([item["spec"] for item in dataset_items])
+    wavs = [item["wav"] for item in dataset_items]
+    specs = [item["spec"] for item in dataset_items]
 
-    return {"wav": wavs, "spec": specs}
+    wavs_padded = pad_sequence(wavs, batch_first=True, padding_value=0.0)
+    specs_padded = pad_sequence(specs, batch_first=True, padding_value=0.0)
+
+    return {
+        "wav": wavs_padded,
+        "spec": specs_padded,
+    }

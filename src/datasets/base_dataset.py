@@ -1,9 +1,11 @@
 import logging
 import random
 from typing import List
+import torchaudio
 
 import torch
 from torch.utils.data import Dataset
+from src.model.melspectrogram import MelSpectrogram, MelSpectrogramConfig
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ class BaseDataset(Dataset):
     """
 
     def __init__(
-        self, index, limit=None, shuffle_index=False, instance_transforms=None
+        self, index, limit=None, shuffle_index=False, instance_transforms=None, target_sr=16000
     ):
         """
         Args:
@@ -39,6 +41,8 @@ class BaseDataset(Dataset):
         self._index: List[dict] = index
 
         self.instance_transforms = instance_transforms
+        self.mel_spectrogram = MelSpectrogram(MelSpectrogramConfig())
+        self.target_sr = target_sr
 
     def __getitem__(self, ind):
         """
@@ -57,10 +61,15 @@ class BaseDataset(Dataset):
         """
         data_dict = self._index[ind]
         data_path = data_dict["path"]
-        data_object = self.load_object(data_path)
-        data_label = data_dict["label"]
+        wav = self.load_audio(data_path)
+        wav = wav.squeeze(0)        
+        instance_data = {"wav": wav}
 
-        instance_data = {"data_object": data_object, "labels": data_label}
+        spec = self.mel_spectrogram(wav.unsqueeze(0))
+        spec = spec.squeeze(0).transpose(0, 1)
+
+        instance_data.update({"spec": spec})
+
         instance_data = self.preprocess_data(instance_data)
 
         return instance_data
@@ -82,6 +91,14 @@ class BaseDataset(Dataset):
         """
         data_object = torch.load(path)
         return data_object
+    
+    def load_audio(self, path):
+        audio_tensor, sr = torchaudio.load(path)
+        audio_tensor = audio_tensor[0:1, :]  # remove all channels but the first
+        target_sr = self.target_sr
+        if sr != target_sr:
+            audio_tensor = torchaudio.functional.resample(audio_tensor, sr, target_sr)
+        return audio_tensor
 
     def preprocess_data(self, instance_data):
         """
@@ -142,9 +159,9 @@ class BaseDataset(Dataset):
             assert "path" in entry, (
                 "Each dataset item should include field 'path'" " - path to audio file."
             )
-            assert "label" in entry, (
-                "Each dataset item should include field 'label'"
-                " - object ground-truth label."
+            assert "audio_len" in entry, (
+                "Each dataset item should include field 'audio_len'"
+                " - object length."
             )
 
     @staticmethod

@@ -1,12 +1,12 @@
 train:
-  _target_: src.datasets.LJspeechDatasetDataset
+  _target_: src.datasets.LJspeechDataset
   part: "train"
   instance_transforms: ${transforms.instance_transforms.train}
 val:
-  _target_: src.datasets.LJspeechDatasetDataset
+  _target_: src.datasets.LJspeechDataset
   part: "val"
   instance_transforms: ${transforms.instance_transforms.inference}
 test:
-  _target_: src.datasets.LJspeechDatasetDataset
+  _target_: src.datasets.LJspeechDataset
   part: "test"
   instance_transforms: ${transforms.instance_transforms.inference}

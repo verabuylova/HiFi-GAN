@@ -1,2 +1,2 @@
 from src.datasets.example import ExampleDataset
-from src.datasets.example import LJspeechDataset
+from src.datasets.ljspeech_dataset import LJspeechDataset
