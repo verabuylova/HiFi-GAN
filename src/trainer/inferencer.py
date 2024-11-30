@@ -2,10 +2,10 @@ import torch
 from tqdm.auto import tqdm
 
 from src.metrics.tracker import MetricTracker
-from src.trainer.base_trainer import BaseTrainer
+from src.trainer.trainer import Trainer
 
 
-class Inferencer(BaseTrainer):
+class Inferencer(Trainer):
     """
     Inferencer (Like Trainer but for Inference) class
 
@@ -97,60 +97,68 @@ class Inferencer(BaseTrainer):
     def process_batch(self, batch_idx, batch, metrics, part):
         """
         Run batch through the model, compute metrics, and
-        save predictions to disk.
-
-        Save directory is defined by save_path in the inference
-        config and current partition.
+        save predictions to disk for source separation.
 
         Args:
             batch_idx (int): the index of the current batch.
             batch (dict): dict-based batch containing the data from
                 the dataloader.
             metrics (MetricTracker): MetricTracker object that computes
-                and aggregates the metrics. The metrics depend on the type
-                of the partition (train or inference).
-            part (str): name of the partition. Used to define proper saving
+                and aggregates the metrics.
+            part (str): name of the partition, used to define the saving
                 directory.
         Returns:
-            batch (dict): dict-based batch containing the data from
-                the dataloader (possibly transformed via batch transform)
-                and model outputs.
+            batch (dict): updated batch containing model outputs.
         """
         batch = self.move_batch_to_device(batch)
-        batch = self.transform_batch(batch)  # transform batch on device -- faster
+        batch = self.transform_batch(batch)
 
         outputs = self.model(**batch)
         batch.update(outputs)
 
-        if metrics is not None:
-            for met in self.metrics["inference"]:
-                metrics.update(met.name, met(**batch))
-
-        # Some saving logic. This is an example
-        # Use if you need to save predictions on disk
-
-        batch_size = batch["logits"].shape[0]
+        batch_size = batch["pred"].shape[0]
         current_id = batch_idx * batch_size
+        # Contains GT
+        if batch["gt"] is not None:
+            if metrics is not None:
+                for met in self.metrics["inference"]:
+                    metrics.update(met.name, met(**batch))
 
-        for i in range(batch_size):
-            # clone because of
-            # https://github.com/pytorch/pytorch/issues/1995
-            logits = batch["logits"][i].clone()
-            label = batch["wav"][i].clone()
-            pred_label = logits.argmax(dim=-1)
+                for i in range(batch_size):
+                    pred = batch["pred"][i].clone()
+                    gt = batch["gt"][i].clone()
 
-            output_id = current_id + i
+                    output_id = current_id + i
 
-            output = {
-                "pred_label": pred_label,
-                "label": label,
-            }
+                    output = {
+                        "pred": pred,
+                        "gt": gt,
+                    }
 
-            if self.save_path is not None:
-                # you can use safetensors or other lib here
-                torch.save(output, self.save_path / part / f"output_{output_id}.pth")
+                    if self.save_path is not None:
+                        torch.save(
+                            output,
+                            self.save_path / part / f"output_{output_id}.pth",
+                        )
 
-        return batch
+                return batch
+        else:
+            for i in range(batch_size):
+                s1_pred = batch["pred"][i].clone()
+
+                output_id = current_id + i
+
+                output = {
+                    "pred": pred,
+                }
+
+                if self.save_path is not None:
+                    torch.save(
+                        output,
+                        self.save_path / part / f"output_{output_id}.pth",
+                    )
+
+            return batch
 
     def _inference_part(self, part, dataloader):
         """
