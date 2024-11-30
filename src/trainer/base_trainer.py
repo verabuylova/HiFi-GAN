@@ -20,16 +20,17 @@ class BaseTrainer:
         model,
         criterion,
         metrics,
-        optimizer,
-        lr_scheduler,
+        gen_optimizer,
+        disc_optimizer,
+        gen_lr_scheduler,
+        disc_lr_scheduler,
         config,
         device,
         dataloaders,
         logger,
         writer,
         epoch_len=None,
-        skip_oom=True,
-        batch_transforms=None,
+        skip_oom=True
     ):
         """
         Args:
@@ -41,6 +42,7 @@ class BaseTrainer:
             optimizer (Optimizer): optimizer for the model.
             lr_scheduler (LRScheduler): learning rate scheduler for the
                 optimizer.
+            text_encoder (CTCTextEncoder): text encoder.
             config (DictConfig): experiment config containing training config.
             device (str): device for tensors and model.
             dataloaders (dict[DataLoader]): dataloaders for different
@@ -56,6 +58,8 @@ class BaseTrainer:
                 tensor name.
         """
         self.is_train = True
+        
+        self.current_epoch = 0 
 
         self.config = config
         self.cfg_trainer = self.config.trainer
@@ -68,9 +72,10 @@ class BaseTrainer:
 
         self.model = model
         self.criterion = criterion
-        self.optimizer = optimizer
-        self.lr_scheduler = lr_scheduler
-        self.batch_transforms = batch_transforms
+        self.gen_optimizer = gen_optimizer
+        self.disc_optimizer = disc_optimizer
+        self.gen_lr_scheduler = gen_lr_scheduler
+        self.disc_lr_scheduler = disc_lr_scheduler
 
         # define dataloaders
         self.train_dataloader = dataloaders["train"]
@@ -123,6 +128,7 @@ class BaseTrainer:
             *[m.name for m in self.metrics["train"]],
             writer=self.writer,
         )
+        #TODO: add grad_norm to metrics?
         self.evaluation_metrics = MetricTracker(
             *self.config.writer.loss_names,
             *[m.name for m in self.metrics["inference"]],
@@ -136,11 +142,15 @@ class BaseTrainer:
         )
 
         if config.trainer.get("resume_from") is not None:
-            resume_path = self.checkpoint_dir / config.trainer.resume_from
+            # resume_path = self.checkpoint_dir / config.trainer.resume_from
+            resume_path = ROOT_PATH / config.trainer.resume_from # чтобы просто надо было указывать путь до файла с конфигом
             self._resume_checkpoint(resume_path)
 
         if config.trainer.get("from_pretrained") is not None:
-            self._from_pretrained(config.trainer.get("from_pretrained"))
+            self._from_pretrained(config.trainer.get("from_pretrained")) # просто путь до предобученной модели
+
+    def increment_epoch(self):
+        self.current_epoch += 1
 
     def train(self):
         """
@@ -166,7 +176,8 @@ class BaseTrainer:
             self._last_epoch = epoch
             result = self._train_epoch(epoch)
 
-            # save logged information into logs dict
+            self.increment_epoch()
+
             logs = {"epoch": epoch}
             logs.update(result)
 
@@ -224,12 +235,15 @@ class BaseTrainer:
             if batch_idx % self.log_step == 0:
                 self.writer.set_step((epoch - 1) * self.epoch_len + batch_idx)
                 self.logger.debug(
-                    "Train Epoch: {} {} Loss: {:.6f}".format(
-                        epoch, self._progress(batch_idx), batch["loss"].item()
+                    "Train Epoch: {} {} Gen loss: {:.6f} Disc loss: {:.6f} Mel loss: {:.6f}".format(
+                        epoch, self._progress(batch_idx), batch["gen_loss"].item(), batch["disc_loss"].item(), batch["mel_loss"].item()
                     )
                 )
                 self.writer.add_scalar(
-                    "learning rate", self.lr_scheduler.get_last_lr()[0]
+                    "disc learning rate", self.disc_lr_scheduler.get_last_lr()[0]
+                )
+                self.writer.add_scalar(
+                    "gen learning rate", self.gen_lr_scheduler.get_last_lr()[0]
                 )
                 self._log_scalars(self.train_metrics)
                 self._log_batch(batch_idx, batch)
@@ -240,6 +254,9 @@ class BaseTrainer:
             if batch_idx + 1 >= self.epoch_len:
                 break
 
+        self.gen_lr_scheduler.step()
+        self.disc_lr_scheduler.step()
+        
         logs = last_train_metrics
 
         # Run val/test

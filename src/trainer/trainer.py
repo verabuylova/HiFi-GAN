@@ -1,5 +1,14 @@
+from pathlib import Path
+
+import pandas as pd
+import torch
+import numpy as np
+import random
+
+from src.logger.utils import plot_spectrogram
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
+
 
 
 class Trainer(BaseTrainer):
@@ -27,13 +36,6 @@ class Trainer(BaseTrainer):
                 model outputs, and losses.
         """
         batch = self.move_batch_to_device(batch)
-        batch = self.transform_batch(batch)  # transform batch on device -- faster
-
-        metric_funcs = self.metrics["inference"]
-        if self.is_train:
-            metric_funcs = self.metrics["train"]
-            self.optimizer.zero_grad()
-
         outputs = self.model(**batch)
         batch.update(outputs)
 
@@ -41,18 +43,31 @@ class Trainer(BaseTrainer):
         batch.update(all_losses)
 
         if self.is_train:
-            batch["loss"].backward()  # sum of all losses is always called loss
-            self._clip_grad_norm()
-            self.optimizer.step()
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
+            self.disc_optimizer.zero_grad()
+            batch.update(self.model.disc_forward(batch["pred"].detach(), batch["gt"]))
+            disc_loss = self.criterion.disc(**batch)
+            batch.update(disc_loss)
+            batch["disc_loss"].backward()
+            self._clip_grad_norm(self.model.mpds)
+            self._clip_grad_norm(self.model.msd)
+            self.disc_optimizer.step()
+            self.train_metrics.update("MPDs grad_norm", self.get_grad_norm(self.model.mpds))
+            self.train_metrics.update("MSD grad_norm", self.get_grad_norm(self.model.msd))
+
+            batch.update(self.model.disc_forward(**batch))
+            self.gen_optimizer.zero_grad()
+            gen_loss = self.criterion.gen(**batch)
+            batch.update(gen_loss)
+            batch["gen_loss"].backward()
+            self._clip_grad_norm(self.model.gen)
+            self.gen_optimizer.step()
+            self.train_metrics.update("Gen grad_norm", self.get_grad_norm(self.model.gen))
+
 
         # update metrics for each loss (in case of multiple losses)
         for loss_name in self.config.writer.loss_names:
             metrics.update(loss_name, batch[loss_name].item())
 
-        for met in metric_funcs:
-            metrics.update(met.name, met(**batch))
         return batch
 
     def _log_batch(self, batch_idx, batch, mode="train"):
@@ -72,8 +87,28 @@ class Trainer(BaseTrainer):
 
         # logging scheme might be different for different partitions
         if mode == "train":  # the method is called only every self.log_step steps
-            # Log Stuff
-            pass
+            self.log_spectrogram(**batch)
         else:
             # Log Stuff
-            pass
+            self.log_spectrogram(**batch)
+            self.log_predictions(**batch)
+
+    def log_spectrogram(self, spectrogram, **batch):
+        spectrogram_for_plot = spectrogram[0].detach().cpu()
+        image = plot_spectrogram(spectrogram_for_plot)
+        self.writer.add_image("spectrogram", image)
+
+    def log_predictions(self, preds, gts, examples_to_log=10, **batch):
+        rows = {}
+        for i, (pred, gt) in enumerate(zip(preds, gts)):
+            if i >= examples_to_log:
+                break
+            pred_audio = self.writer.wandb.Audio(pred.cpu().squeeze().numpy(), sample_rate=16000)
+            gt_audio = self.writer.wandb.Audio(gt.cpu().squeeze().numpy(), sample_rate=16000)
+            
+            rows[i] = {
+                "pred": pred_audio,
+                "gt": gt_audio
+            }
+
+        self.writer.add_table("logs", pd.DataFrame.from_dict(rows, orient="index"))
