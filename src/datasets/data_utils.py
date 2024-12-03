@@ -2,9 +2,9 @@ from itertools import repeat
 
 from hydra.utils import instantiate
 
-from src.datasets.collate import collate_fn
 from src.utils.init_utils import set_worker_seed
 
+from src.datasets.collate import collate_fn
 
 def inf_loop(dataloader):
     """
@@ -50,6 +50,8 @@ def get_dataloaders(config, device):
 
     Args:
         config (DictConfig): hydra experiment config.
+        text_encoder (CTCTextEncoder): instance of the text encoder
+            for the datasets.
         device (str): device to use for batch transforms.
     Returns:
         dataloaders (dict[DataLoader]): dict containing dataloader for a
@@ -62,13 +64,13 @@ def get_dataloaders(config, device):
     batch_transforms = instantiate(config.transforms.batch_transforms)
     move_batch_transforms_to_device(batch_transforms, device)
 
-    # dataset partitions init
-    datasets = instantiate(config.datasets)  # instance transforms are defined inside
-
     # dataloaders init
     dataloaders = {}
     for dataset_partition in config.datasets.keys():
-        dataset = datasets[dataset_partition]
+        # dataset partition init
+        dataset = instantiate(
+            config.datasets[dataset_partition]
+        )  # instance transforms are defined inside
 
         assert config.dataloader.batch_size <= len(dataset), (
             f"The batch size ({config.dataloader.batch_size}) cannot "

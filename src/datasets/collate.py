@@ -1,25 +1,17 @@
-import torch
+from itertools import chain
 from torch.nn.utils.rnn import pad_sequence
 
 def collate_fn(dataset_items: list[dict]):
-    """
-    Collate and pad fields in the dataset items.
-    Converts individual items into a batch.
+    audios = list(chain.from_iterable(item['audio'] for item in dataset_items))
+    audios = pad_sequence(audios, batch_first=True)
 
-    Args:
-        dataset_items (list[dict]): list of objects from
-            dataset.__getitem__.
-    Returns:
-        result_batch (dict[Tensor]): dict, containing batch-version
-            of the tensors.
-    """
-    wavs = [item["wav"] for item in dataset_items]
-    specs = [item["spec"] for item in dataset_items]
+    spectrograms = list(chain.from_iterable(item['spectrogram'].transpose(1, 2) for item in dataset_items))
+    spectrograms = pad_sequence(spectrograms, batch_first=True, padding_value=-11.5129251).transpose(1, 2)
 
-    wavs_padded = pad_sequence(wavs, batch_first=True, padding_value=0.0)
-    specs_padded = pad_sequence(specs, batch_first=True, padding_value=0.0)
+    texts = list(chain.from_iterable(item['text'] for item in dataset_items))
 
     return {
-        "wav": wavs_padded,
-        "spec": specs_padded,
+        'audio': audios,
+        'spectrogram': spectrograms,
+        'text': texts
     }
