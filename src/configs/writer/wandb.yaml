@@ -1,8 +1,9 @@
 _target_: src.logger.WandBWriter
-project_name: "pytorch_template"
+project_name: "dla-hw3-hifigan"
 entity: null
-run_name: "testing"
-mode: "online"
-loss_names: ["disc_loss", "fm_loss", "gen_loss", "mel_loss"] # which losses to log (useful for multi-loss tasks, s.a. GANs)
+run_name: "night run - default hifigan v1"
+mode: "offline"
+loss_names: ["loss"] # which losses to log (useful for multi-loss tasks, s.a. GANs)
 log_checkpoints: False # set to True if you want to log save_dir with checkpoints to W&B
 id_length: 8 # length of the run_id
+audio_sample_rate: 22050
