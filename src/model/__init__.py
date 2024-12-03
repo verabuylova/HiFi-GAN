@@ -1,7 +1,3 @@
-from src.model.baseline_model import BaselineModel
-from src.model.melspectrogram import MelSpectrogram
+from src.model.hifigan import HiFiGanDiscriminator, HiFiGanGenerator
 
-__all__ = [
-    "BaselineModel",
-    "MelSpectrogram"
-]
+__all__ = ["HiFiGanGenerator", "HiFiGanDiscriminator"]
