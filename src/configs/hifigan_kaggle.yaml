@@ -3,7 +3,7 @@ defaults:
   - discriminator: hifigan
   - writer: wandb
   - metrics: example
-  - datasets: ljspeech
+  - datasets: ljspeech_kaggle
   - dataloader: example
   - transforms: mel_spec
   - _self_

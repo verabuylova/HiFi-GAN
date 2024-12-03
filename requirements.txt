@@ -15,3 +15,4 @@ speechbrain
 black
 isort
 pre-commit
+wget

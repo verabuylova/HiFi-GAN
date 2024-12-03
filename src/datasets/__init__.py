@@ -1,1 +1,2 @@
 from src.datasets.ljspeech import LJspeechDataset
+from src.datasets.ljspeech_kaggle import LJspeechDatasetKaggle
