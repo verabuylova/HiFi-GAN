@@ -2,73 +2,60 @@ from pathlib import Path
 
 import pandas as pd
 import torch
-import numpy as np
-import random
 
 from src.logger.utils import plot_spectrogram
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
-
-
+from src.transforms import MelSpectrogram, MelSpectrogramConfig
 
 class Trainer(BaseTrainer):
-    """
-    Trainer class. Defines the logic of batch logging and processing.
-    """
-
     def process_batch(self, batch, metrics: MetricTracker):
-        """
-        Run batch through the model, compute metrics, compute loss,
-        and do training step (during training stage).
-
-        The function expects that criterion aggregates all losses
-        (if there are many) into a single one defined in the 'loss' key.
-
-        Args:
-            batch (dict): dict-based batch containing the data from
-                the dataloader.
-            metrics (MetricTracker): MetricTracker object that computes
-                and aggregates the metrics. The metrics depend on the type of
-                the partition (train or inference).
-        Returns:
-            batch (dict): dict-based batch containing the data from
-                the dataloader (possibly transformed via batch transform),
-                model outputs, and losses.
-        """
         batch = self.move_batch_to_device(batch)
-        outputs = self.model(**batch)
+        batch = self.transform_batch(batch)
+
+        metric_funcs = self.metrics["inference"]
+        if self.is_train:
+            metric_funcs = self.metrics["train"]
+            self.g_optimizer.zero_grad()
+            self.d_optimizer.zero_grad()
+
+        outputs = self.generator(**batch)
         batch.update(outputs)
 
-        all_losses = self.criterion(**batch)
+        discriminator_outputs = self.discriminator(**batch, detach_generated=True)
+        batch.update(discriminator_outputs)
+
+        all_discriminator_losses = self.d_criterion(**batch)
+        batch.update(all_discriminator_losses)
+
+        if self.is_train:
+            batch["d_loss"].backward()
+            self._clip_grad_norm()
+            self.d_optimizer.step()
+            if self.d_lr_scheduler is not None:
+                self.d_lr_scheduler.step()
+
+        discriminator_outputs = self.discriminator(**batch, detach_generated=False)
+        batch.update(discriminator_outputs)
+
+        all_losses = self.g_criterion(**batch)
         batch.update(all_losses)
 
         if self.is_train:
-            self.disc_optimizer.zero_grad()
-            batch.update(self.model.disc_forward(batch["pred"].detach(), batch["gt"]))
-            disc_loss = self.criterion.disc(**batch)
-            batch.update(disc_loss)
-            batch["disc_loss"].backward()
-            self._clip_grad_norm(self.model.mpds)
-            self._clip_grad_norm(self.model.msd)
-            self.disc_optimizer.step()
-            self.train_metrics.update("MPDs grad_norm", self.get_grad_norm(self.model.mpds))
-            self.train_metrics.update("MSD grad_norm", self.get_grad_norm(self.model.msd))
+            batch["loss"].backward()
+            self._clip_grad_norm()
+            self.g_optimizer.step()
+            if self.g_lr_scheduler is not None:
+                self.g_lr_scheduler.step()
 
-            batch.update(self.model.disc_forward(**batch))
-            self.gen_optimizer.zero_grad()
-            gen_loss = self.criterion.gen(**batch)
-            batch.update(gen_loss)
-            batch["gen_loss"].backward()
-            self._clip_grad_norm(self.model.gen)
-            self.gen_optimizer.step()
-            self.train_metrics.update("Gen grad_norm", self.get_grad_norm(self.model.gen))
-
-
-        # update metrics for each loss (in case of multiple losses)
         for loss_name in self.config.writer.loss_names:
             metrics.update(loss_name, batch[loss_name].item())
 
+        for met in metric_funcs:
+            metrics.update(met.name, met(**batch))
+        
         return batch
+
 
     def _log_batch(self, batch_idx, batch, mode="train"):
         """
@@ -88,27 +75,32 @@ class Trainer(BaseTrainer):
         # logging scheme might be different for different partitions
         if mode == "train":  # the method is called only every self.log_step steps
             self.log_spectrogram(**batch)
+            self.log_predictions(**batch)
         else:
             # Log Stuff
             self.log_spectrogram(**batch)
             self.log_predictions(**batch)
 
-    def log_spectrogram(self, spectrogram, **batch):
+    def log_spectrogram(self, spectrogram, output_audio, **batch):
         spectrogram_for_plot = spectrogram[0].detach().cpu()
-        image = plot_spectrogram(spectrogram_for_plot)
-        self.writer.add_image("spectrogram", image)
+        output_spectrogram = MelSpectrogram(MelSpectrogramConfig())(
+            output_audio.detach().cpu()
+        )[0]
 
-    def log_predictions(self, preds, gts, examples_to_log=10, **batch):
-        rows = {}
-        for i, (pred, gt) in enumerate(zip(preds, gts)):
-            if i >= examples_to_log:
-                break
-            pred_audio = self.writer.wandb.Audio(pred.cpu().squeeze().numpy(), sample_rate=16000)
-            gt_audio = self.writer.wandb.Audio(gt.cpu().squeeze().numpy(), sample_rate=16000)
-            
-            rows[i] = {
-                "pred": pred_audio,
-                "gt": gt_audio
-            }
+        self.writer.add_image("gt", plot_spectrogram(spectrogram_for_plot))
+        self.writer.add_image("pred", plot_spectrogram(output_spectrogram))
 
-        self.writer.add_table("logs", pd.DataFrame.from_dict(rows, orient="index"))
+    def log_audio(self, audio, audio_name):
+
+        audio = (audio / torch.max(torch.abs(audio))).detach().cpu()
+        self.writer.add_audio(
+            audio_name,
+            audio.float(),
+            sample_rate=self.config.writer.audio_sample_rate,
+        )
+
+    def log_predictions(self, output_audio, audio, examples_to_log=1, **batch):
+        for i, (pred, gt) in enumerate(zip(output_audio, audio)):
+            self.log_audio(pred, f"pred_{i}")
+            self.log_audio(gt, f"gt_{i}")
+
