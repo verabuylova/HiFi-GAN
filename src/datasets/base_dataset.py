@@ -23,7 +23,7 @@ class BaseDataset(Dataset):
         self,
         index,
         target_sr=22050,
-        audio_chunk_size=16384,
+        segment=8192,
         limit=None,
         max_audio_length=None,
         shuffle_index=False,
@@ -57,7 +57,7 @@ class BaseDataset(Dataset):
         self.target_sr = target_sr
         self.instance_transforms = instance_transforms
 
-        self.audio_chunk_size = audio_chunk_size
+        self.segment = segment
 
     def __getitem__(self, ind):
         """
@@ -107,17 +107,17 @@ class BaseDataset(Dataset):
         target_sr = self.target_sr
         if sr != target_sr:
             audio_tensor = torchaudio.functional.resample(audio_tensor, sr, target_sr)
-        if self.audio_chunk_size > 0:
-            if audio_tensor.shape[1] > self.audio_chunk_size:
+        if self.segment > 0:
+            if audio_tensor.shape[1] > self.segment:
                 random_start = random.randint(
-                    0, audio_tensor.shape[1] - self.audio_chunk_size
+                    0, audio_tensor.shape[1] - self.segment
                 )
                 audio_tensor = audio_tensor[
-                    :, random_start : random_start + self.audio_chunk_size
+                    :, random_start : random_start + self.segment
                 ]
             else:
                 audio_tensor = torch.nn.functional.pad(
-                    audio_tensor, (0, self.audio_chunk_size - audio_tensor.shape[1])
+                    audio_tensor, (0, self.segment - audio_tensor.shape[1])
                 )
         return audio_tensor
 
