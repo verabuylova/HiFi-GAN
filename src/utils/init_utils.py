@@ -13,6 +13,7 @@ from omegaconf import OmegaConf
 from src.logger.logger import setup_logging
 from src.utils.io_utils import ROOT_PATH
 
+logging.getLogger('speechbrain').setLevel(logging.WARNING)
 
 def set_worker_seed(worker_id):
     """
