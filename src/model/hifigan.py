@@ -142,7 +142,7 @@ class MRF(nn.Module):
         return res / len(self.layers)
 
 class HiFiGanGenerator(nn.Module):
-    def __init__(self, h_u=512, k_u=[16, 16, 4, 4]):
+    def __init__(self, h_u=128, k_u=[16, 16, 4, 4]):
         super().__init__()
         self.conv1 = weight_norm(nn.Conv1d(80, h_u, kernel_size=7, padding=3))
         
