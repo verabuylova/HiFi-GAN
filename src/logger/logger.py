@@ -5,6 +5,8 @@ from pathlib import Path
 from src.utils.io_utils import ROOT_PATH, read_json
 
 
+logging.getLogger('speechbrain').setLevel(logging.WARNING)
+
 def setup_logging(save_dir, log_config=None, default_level=logging.INFO, append=False):
     """
     Setup logging configuration.
