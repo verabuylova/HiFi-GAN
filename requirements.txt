@@ -1,4 +1,4 @@
-torch==2.2.0+cu121
+torch==2.2.0
 torchvision==0.17.0
 torchmetrics
 numpy==1.26.4
@@ -9,7 +9,7 @@ wandb
 comet_ml
 hydra-core
 librosa
-torchaudio==2.2.0+cu121
+torchaudio==2.2.0
 speechbrain
 
 black
