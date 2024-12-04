@@ -22,7 +22,7 @@ d_loss_function:
 trainer:
   log_step: 500
   n_epochs: 80
-  epoch_len: 1000
+  epoch_len: 500
   device_tensors: ["spectrogram", "audio"] # which tensors should be on device (ex. GPU)
   from_pretrained: /kaggle/input/hifigan-best/model_best.pth
   device: auto # device name or "auto"
