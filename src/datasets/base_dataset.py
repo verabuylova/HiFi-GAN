@@ -87,11 +87,9 @@ class BaseDataset(Dataset):
             "text": text,
             "audio_path": audio_path,
         }
-
-        # TODO think of how to apply wave augs before calculating spectrogram
-        # Note: you may want to preserve both audio in time domain and
-        # in time-frequency domain for logging
-        instance_data = self.preprocess_data(instance_data)
+        for key, value in instance_data.items():
+            if isinstance(value, torch.Tensor):
+                assert value.device.type == 'cpu', f"{key} is on {value.device.type}"
 
         return instance_data
 

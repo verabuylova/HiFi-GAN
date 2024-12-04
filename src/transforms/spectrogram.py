@@ -21,16 +21,12 @@ class MelSpectrogramConfig:
     # value of melspectrograms if we fed a silence into `MelSpectrogram`
     pad_value: float = -11.5129251
 
-
 class MelSpectrogram(nn.Module):
     def __init__(self, config: MelSpectrogramConfig, normalize_audio: bool = False):
         super().__init__()
 
         self.config = config
         self.normalize_audio = normalize_audio
-
-        # Set the default device to GPU if available
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.mel_spectrogram = torchaudio.transforms.MelSpectrogram(
             sample_rate=config.sr,
@@ -42,7 +38,7 @@ class MelSpectrogram(nn.Module):
             n_mels=config.n_mels,
             power=config.power,
             center=config.center,
-        ).to(self.device)  # Move the transform to the device
+        )
 
         # needed for collate_fn paddings
         self.pad_value = config.pad_value
@@ -56,7 +52,7 @@ class MelSpectrogram(nn.Module):
             fmin=config.f_min,
             fmax=config.f_max,
         ).T
-        mel_basis = torch.tensor(mel_basis, dtype=torch.float32).to(self.device)
+        mel_basis = torch.tensor(mel_basis, dtype=torch.float32)
         self.mel_spectrogram.mel_scale.fb.copy_(mel_basis)
 
     def forward(self, audio: torch.Tensor) -> torch.Tensor:
@@ -64,7 +60,8 @@ class MelSpectrogram(nn.Module):
         :param audio: Expected shape is [B, T]
         :return: Shape is [B, n_mels, T']
         """
-        audio = audio.to(self.device)
+        # Do not move audio to GPU here
+        # audio = audio.to(self.device)
 
         if self.normalize_audio:
             audio = audio / torch.abs(audio).max(dim=1, keepdim=True)[0]
