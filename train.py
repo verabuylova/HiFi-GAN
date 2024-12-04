@@ -10,6 +10,8 @@ from src.datasets.data_utils import get_dataloaders
 from src.trainer import Trainer
 from src.utils.init_utils import set_random_seed, setup_saving_and_logging
 
+import torch.multiprocessing as mp
+
 warnings.filterwarnings("ignore", category=UserWarning)
 
 os.environ["HYDRA_FULL_ERROR"] = "1"
@@ -101,5 +103,7 @@ def main(config):
     trainer.train()
 
 
-if __name__ == "__main__":
-    main()
+
+if __name__ == '__main__':
+    mp.set_start_method('spawn')
+    main()  
