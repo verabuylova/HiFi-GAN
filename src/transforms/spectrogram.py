@@ -60,8 +60,6 @@ class MelSpectrogram(nn.Module):
         :param audio: Expected shape is [B, T]
         :return: Shape is [B, n_mels, T']
         """
-        # Do not move audio to GPU here
-        # audio = audio.to(self.device)
 
         if self.normalize_audio:
             audio = audio / torch.abs(audio).max(dim=1, keepdim=True)[0]

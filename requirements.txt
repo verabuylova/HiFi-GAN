@@ -11,6 +11,8 @@ hydra-core
 librosa
 torchaudio
 speechbrain
+fairseq
+IPython
 
 black
 isort
