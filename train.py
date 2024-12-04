@@ -101,5 +101,8 @@ def main(config):
     trainer.train()
 
 
-if __name__ == "__main__":
+import torch.multiprocessing as mp
+
+if __name__ == '__main__':
+    mp.set_start_method('spawn')
     main()
