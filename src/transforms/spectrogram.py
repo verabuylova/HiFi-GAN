@@ -27,8 +27,10 @@ class MelSpectrogram(nn.Module):
         super().__init__()
 
         self.config = config
-
         self.normalize_audio = normalize_audio
+
+        # Set the default device to GPU if available
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.mel_spectrogram = torchaudio.transforms.MelSpectrogram(
             sample_rate=config.sr,
@@ -40,16 +42,13 @@ class MelSpectrogram(nn.Module):
             n_mels=config.n_mels,
             power=config.power,
             center=config.center,
-        )
+        ).to(self.device)  # Move the transform to the device
 
         # needed for collate_fn paddings
         self.pad_value = config.pad_value
 
-        # The is no way to set power in constructor in 0.5.0 version.
         self.mel_spectrogram.spectrogram.power = config.power
 
-        # Default `torchaudio` mel basis uses HTK formula. In order to be compatible with WaveGlow
-        # we decided to use Slaney one instead (as well as `librosa` does by default).
         mel_basis = librosa.filters.mel(
             sr=config.sr,
             n_fft=config.n_fft,
@@ -57,15 +56,19 @@ class MelSpectrogram(nn.Module):
             fmin=config.f_min,
             fmax=config.f_max,
         ).T
-        self.mel_spectrogram.mel_scale.fb.copy_(torch.tensor(mel_basis))
+        mel_basis = torch.tensor(mel_basis, dtype=torch.float32).to(self.device)
+        self.mel_spectrogram.mel_scale.fb.copy_(mel_basis)
 
     def forward(self, audio: torch.Tensor) -> torch.Tensor:
         """
         :param audio: Expected shape is [B, T]
         :return: Shape is [B, n_mels, T']
         """
+        audio = audio.to(self.device)
+
         if self.normalize_audio:
-            audio = audio / torch.abs(audio).max(dim=1)[0]
+            audio = audio / torch.abs(audio).max(dim=1, keepdim=True)[0]
+
         audio = torch.nn.functional.pad(
             audio,
             (
@@ -74,6 +77,7 @@ class MelSpectrogram(nn.Module):
             ),
             mode="reflect",
         )
+
         mel = self.mel_spectrogram(audio).clamp_(min=1e-5).log_()
 
         return mel
