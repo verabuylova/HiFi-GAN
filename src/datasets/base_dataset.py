@@ -23,7 +23,7 @@ class BaseDataset(Dataset):
         self,
         index,
         target_sr=22050,
-        segment=8192,
+        segment=16384,
         limit=None,
         max_audio_length=None,
         shuffle_index=False,
