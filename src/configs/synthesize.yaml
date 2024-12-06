@@ -4,7 +4,7 @@ defaults:
   - metrics: example
   - datasets: inference # we do not want to run inference on training data
   - dataloader: example
-  - transforms: example
+  - transforms: mel_spec
   - _self_
 inferencer:
   device_tensors: ["spectrogram", "audio"] # which tensors should be on device (ex. GPU)
