@@ -16,8 +16,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 def main(config):
     """
     Main script for inference. Instantiates the model, metrics, and
-    dataloaders. Runs Inferencer to calculate metrics and (or)
-    save predictions.
+    dataloaders. 
 
     Args:
         config (DictConfig): hydra experiment config.
@@ -29,30 +28,32 @@ def main(config):
     else:
         device = config.inferencer.device
 
-    # setup data_loader instances
-    # batch_transforms should be put on device
     dataloaders, batch_transforms = get_dataloaders(config, device)
 
-    # build model architecture, then print to console
-    model = instantiate(config.model).to(device)
-    print(model)
+    generator = instantiate(config.generator).to(device)
+    discriminator = instantiate(config.discriminator).to(device) 
+    print(generator)
 
-    # get metrics
-    metrics = instantiate(config.metrics)
+    if config.inferencer.get("from_pretrained"):
+        checkpoint = torch.load(config.inferencer.from_pretrained, map_location=device)
+        generator.load_state_dict(checkpoint["state_dict"])
+        print(f"Loaded checkpoint from {config.inferencer.from_pretrained}")
 
-    # save_path for model predictions
-    save_path = ROOT_PATH / "data" / "saved" / config.inferencer.save_path
+    metrics = instantiate(config.metrics) 
+
+    save_path = ROOT_PATH / "data" / "generated_audio" / config.inferencer.save_path
     save_path.mkdir(exist_ok=True, parents=True)
 
     inferencer = Inferencer(
-        model=model,
+        generator=generator,
+        discriminator=discriminator, 
         config=config,
         device=device,
         dataloaders=dataloaders,
         batch_transforms=batch_transforms,
         save_path=save_path,
         metrics=metrics,
-        skip_model_load=False,
+        skip_model_load=True,
     )
 
     logs = inferencer.run_inference()

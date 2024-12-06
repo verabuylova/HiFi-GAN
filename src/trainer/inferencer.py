@@ -3,20 +3,21 @@ from tqdm.auto import tqdm
 
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
+from src.utils.io_utils import save_audio  
 
 
 class Inferencer(BaseTrainer):
     """
     Inferencer (Like Trainer but for Inference) class
 
-    The class is used to process data without
-    the need of optimizers, writers, etc.
-    Required to evaluate the model on the dataset, save predictions, etc.
+    The class is used to generate audio using the HiFi-GAN model, evaluate performance,
+    and save the generated audio files.
     """
 
     def __init__(
         self,
-        model,
+        generator,
+        discriminator,  
         config,
         device,
         dataloaders,
@@ -29,13 +30,13 @@ class Inferencer(BaseTrainer):
         Initialize the Inferencer.
 
         Args:
-            model (nn.Module): PyTorch model.
+            generator (nn.Module): HiFi-GAN generator model.
+            discriminator (nn.Module): HiFi-GAN discriminator model (if needed for metrics).
             config (DictConfig): run config containing inferencer config.
             device (str): device for tensors and model.
             dataloaders (dict[DataLoader]): dataloaders for different
                 sets of data.
-            save_path (str): path to save model predictions and other
-                information.
+            save_path (Path): path to save generated audio files.
             metrics (dict): dict with the definition of metrics for
                 inference (metrics[inference]). Each metric is an instance
                 of src.metrics.BaseMetric.
@@ -52,21 +53,18 @@ class Inferencer(BaseTrainer):
         ), "Provide checkpoint or set skip_model_load=True"
 
         self.config = config
-        self.cfg_trainer = self.config.inferencer
+        self.cfg_inferencer = self.config.inferencer
 
         self.device = device
 
-        self.model = model
+        self.generator = generator
+        self.discriminator = discriminator
         self.batch_transforms = batch_transforms
 
-        # define dataloaders
         self.evaluation_dataloaders = {k: v for k, v in dataloaders.items()}
-
-        # path definition
 
         self.save_path = save_path
 
-        # define metrics
         self.metrics = metrics
         if self.metrics is not None:
             self.evaluation_metrics = MetricTracker(
@@ -77,7 +75,6 @@ class Inferencer(BaseTrainer):
             self.evaluation_metrics = None
 
         if not skip_model_load:
-            # init model
             self._from_pretrained(config.inferencer.get("from_pretrained"))
 
     def run_inference(self):
@@ -97,18 +94,14 @@ class Inferencer(BaseTrainer):
     def process_batch(self, batch_idx, batch, metrics, part):
         """
         Run batch through the model, compute metrics, and
-        save predictions to disk.
-
-        Save directory is defined by save_path in the inference
-        config and current partition.
+        save generated audio to disk.
 
         Args:
             batch_idx (int): the index of the current batch.
             batch (dict): dict-based batch containing the data from
                 the dataloader.
             metrics (MetricTracker): MetricTracker object that computes
-                and aggregates the metrics. The metrics depend on the type
-                of the partition (train or inference).
+                and aggregates the metrics.
             part (str): name of the partition. Used to define proper saving
                 directory.
         Returns:
@@ -116,48 +109,32 @@ class Inferencer(BaseTrainer):
                 the dataloader (possibly transformed via batch transform)
                 and model outputs.
         """
-        # TODO change inference logic so it suits ASR assignment
-        # and task pipeline
-
         batch = self.move_batch_to_device(batch)
+
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
-        outputs = self.model(**batch)
-        batch.update(outputs)
+        with torch.no_grad():
+            output_audio = self.generator(**batch)["output_audio"] 
+
+        batch.update({"output_audio": output_audio})
 
         if metrics is not None:
             for met in self.metrics["inference"]:
                 metrics.update(met.name, met(**batch))
 
-        # Some saving logic. This is an example
-        # Use if you need to save predictions on disk
-
-        batch_size = batch["logits"].shape[0]
-        current_id = batch_idx * batch_size
-
-        for i in range(batch_size):
-            # clone because of
-            # https://github.com/pytorch/pytorch/issues/1995
-            logits = batch["logits"][i].clone()
-            label = batch["labels"][i].clone()
-            pred_label = logits.argmax(dim=-1)
-
-            output_id = current_id + i
-
-            output = {
-                "pred_label": pred_label,
-                "label": label,
-            }
-
-            if self.save_path is not None:
-                # you can use safetensors or other lib here
-                torch.save(output, self.save_path / part / f"output_{output_id}.pth")
+        if self.save_path is not None:
+            batch_size = output_audio.shape[0]
+            for i in range(batch_size):
+                audio = output_audio[i].cpu().squeeze(0) 
+                filename = f"{part}_batch{batch_idx}_audio{i}.wav"
+                filepath = self.save_path / part / filename
+                save_audio(filepath, audio, sample_rate=self.config.inferencer.sample_rate)
 
         return batch
 
     def _inference_part(self, part, dataloader):
         """
-        Run inference on a given partition and save predictions
+        Run inference on a given partition and save generated audio.
 
         Args:
             part (str): name of the partition.
@@ -167,18 +144,20 @@ class Inferencer(BaseTrainer):
         """
 
         self.is_train = False
-        self.model.eval()
+        self.generator.eval()
+        if self.discriminator:
+            self.discriminator.eval()
 
-        self.evaluation_metrics.reset()
+        if self.evaluation_metrics:
+            self.evaluation_metrics.reset()
 
-        # create Save dir
         if self.save_path is not None:
             (self.save_path / part).mkdir(exist_ok=True, parents=True)
 
         with torch.no_grad():
             for batch_idx, batch in tqdm(
                 enumerate(dataloader),
-                desc=part,
+                desc=f"Inference on {part}",
                 total=len(dataloader),
             ):
                 batch = self.process_batch(
@@ -189,3 +168,4 @@ class Inferencer(BaseTrainer):
                 )
 
         return self.evaluation_metrics.result()
+

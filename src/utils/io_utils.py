@@ -1,6 +1,7 @@
 import json
 from collections import OrderedDict
 from pathlib import Path
+import torchaudio
 
 ROOT_PATH = Path(__file__).absolute().resolve().parent.parent.parent
 
@@ -30,3 +31,8 @@ def write_json(content, fname):
     fname = Path(fname)
     with fname.open("wt") as handle:
         json.dump(content, handle, indent=4, sort_keys=False)
+
+def save_audio(filepath, audio_tensor, sample_rate=22050):
+    if audio_tensor.dim() == 1:
+        audio_tensor = audio_tensor.unsqueeze(0) 
+    torchaudio.save(filepath, audio_tensor, sample_rate)
