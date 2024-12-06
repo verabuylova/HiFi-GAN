@@ -128,7 +128,7 @@ class Inferencer(BaseTrainer):
                 audio = output_audio[i].cpu().squeeze(0) 
                 filename = f"{part}_batch{batch_idx}_audio{i}.wav"
                 filepath = self.save_path / part / filename
-                save_audio(filepath, audio, sample_rate=self.config.inferencer.sample_rate)
+                save_audio(filepath, audio, sample_rate=22050)
 
         return batch
 
