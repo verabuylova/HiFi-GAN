@@ -53,7 +53,7 @@ class Inferencer(BaseTrainer):
         ), "Provide checkpoint or set skip_model_load=True"
 
         self.config = config
-        self.cfg_inferencer = self.config.inferencer
+        self.cfg_trainer = self.config.inferencer
 
         self.device = device
 
