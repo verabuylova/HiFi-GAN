@@ -48,11 +48,19 @@ class FeatureMatchingLoss(nn.Module):
     def forward(self, preds, labels):
         return sum(F.l1_loss(p, l) for pred, label in zip(preds, labels) for p, l in zip(pred, label))
 
+import torch
+
+def get_device():
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    else:
+        return torch.device("cpu")
+
 
 class GenLoss(nn.Module):
-    def __init__(self, device='cuda'):
+    def __init__(self, device=None):
         super().__init__()
-        self.device = device
+        self.device = get_device()
         self.mel_spectrogram = MelSpectrogram(MelSpectrogramConfig()).to(self.device)
         self.feature_matching_loss = FeatureMatchingLoss()
 
