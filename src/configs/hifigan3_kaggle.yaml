@@ -21,10 +21,10 @@ d_loss_function:
   _target_: src.loss.DiscLoss
 trainer:
   log_step: 500
-  n_epochs: 80
+  n_epochs: 35
   epoch_len: 500
   device_tensors: ["spectrogram", "audio"] # which tensors should be on device (ex. GPU)
-  from_pretrained: /kaggle/input/hifigan-best2/model_best.pth
+  from_pretrained: /kaggle/input/model-best-5/model_best-5.pth
   device: auto # device name or "auto"
   override: True # if True, will override the previous run with the same name
   monitor: "min test_loss" # "off" or "max/min metric_name", i.e. our goal is to maximize/minimize metric
