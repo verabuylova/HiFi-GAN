@@ -1,4 +1,6 @@
 test:
-  _target_: src.datasets.CustomDirTextDataset
+  _target_: src.datasets.LJspeechDataset
+  part: "test"
   instance_transforms: ${transforms.instance_transforms.inference}
-  text: "Hello everybody"
+  limit: 2
+  segment: -1

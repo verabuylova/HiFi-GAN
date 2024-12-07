@@ -1,18 +1,19 @@
-torch==2.2.0
-torchvision==0.17.0
-torchmetrics
+torch==2.5.1
+torchvision==0.20.1
+torchaudio==2.5.1
+soundfile
 numpy==1.26.4
+torch_audiomentations
 tqdm
 matplotlib
 pandas
 wandb
 comet_ml
 hydra-core
-librosa
-torchaudio==2.2.0
+transformers
+datasets
 speechbrain
 
 black
 isort
 pre-commit
-wget

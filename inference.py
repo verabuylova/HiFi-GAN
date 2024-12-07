@@ -12,11 +12,12 @@ from src.utils.io_utils import ROOT_PATH
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-@hydra.main(version_base=None, config_path="src/configs", config_name="inference")
+@hydra.main(version_base=None, config_path="src/configs", config_name="synthesize")
 def main(config):
     """
     Main script for inference. Instantiates the model, metrics, and
-    dataloaders. 
+    dataloaders. Runs Inferencer to calculate metrics and (or)
+    save predictions.
 
     Args:
         config (DictConfig): hydra experiment config.
@@ -28,32 +29,34 @@ def main(config):
     else:
         device = config.inferencer.device
 
+    # setup data_loader instances
+    # batch_transforms should be put on device
     dataloaders, batch_transforms = get_dataloaders(config, device)
 
+    # build model architecture, then print to console
     generator = instantiate(config.generator).to(device)
-    discriminator = instantiate(config.discriminator).to(device) 
-    print(generator)
+    # print(model)
 
-    if config.inferencer.get("from_pretrained"):
-        checkpoint = torch.load(config.inferencer.from_pretrained, map_location=device)
-        generator.load_state_dict(checkpoint["state_dict"])
-        print(f"Loaded checkpoint from {config.inferencer.from_pretrained}")
+    torch.backends.cudnn.benchmark = True  # optimize slow_dilated_conv2d
 
-    metrics = instantiate(config.metrics) 
+    # get metrics
+    metrics = {"inference": []}
+    for metric_config in config.metrics.get("inference", []):
+        metrics["inference"].append(instantiate(metric_config))
 
-    save_path = ROOT_PATH / "data" / "generated_audio" / config.inferencer.save_path
+    # save_path for model predictions
+    save_path = ROOT_PATH / "data" / "saved" / config.inferencer.save_path
     save_path.mkdir(exist_ok=True, parents=True)
 
     inferencer = Inferencer(
         generator=generator,
-        discriminator=discriminator, 
         config=config,
         device=device,
         dataloaders=dataloaders,
         batch_transforms=batch_transforms,
         save_path=save_path,
         metrics=metrics,
-        skip_model_load=True,
+        skip_model_load=False,
     )
 
     logs = inferencer.run_inference()
