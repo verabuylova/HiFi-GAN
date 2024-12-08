@@ -13,9 +13,8 @@ hydra-core
 transformers
 datasets
 speechbrain
-nltk
-g2p-en
 git+https://github.com/AndreevP/wvmos
+wget
 
 black
 isort
