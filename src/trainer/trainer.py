@@ -90,15 +90,18 @@ class Trainer(BaseTrainer):
         self.writer.add_image("gt", plot_spectrogram(spectrogram_for_plot))
         self.writer.add_image("pred", plot_spectrogram(output_spectrogram))
 
-    def log_audio(self, audio, audio_name):
-        audio = (audio / torch.max(torch.abs(audio))).detach().cpu()
-        self.writer.add_audio(
-            audio_name,
-            audio.float(),
-            sample_rate=22050,
-        )
-
     def log_predictions(self, output_audio, audio, examples_to_log=1, **batch):
         for i, (pred, gt) in enumerate(zip(output_audio, audio)):
-            self.log_audio(pred, f"pred_{i}")
-            self.log_audio(gt, f"gt_{i}")
+            pred = (pred / torch.max(torch.abs(pred))).detach().cpu()
+            gt = (gt / torch.max(torch.abs(gt))).detach().cpu()
+            
+            self.writer.add_audio(
+                f"pred_{i}",
+                pred.float(),
+                sample_rate=22050,
+            )
+            self.writer.add_audio(
+                f"gt_{i}",
+                gt.float(),
+                sample_rate=22050,
+        )
