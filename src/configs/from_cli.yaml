@@ -11,4 +11,3 @@ inferencer:
   save_path: "result" # any name here, can be a dataset name
   seed: 1
   from_pretrained: "./saved/model_best-5.pth" # path to the pretrained model
-text: 'Printing, in the only sense with which we are at present concerned, differs from most if not from all the arts and crafts represented in the Exhibition.'
