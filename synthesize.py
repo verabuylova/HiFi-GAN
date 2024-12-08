@@ -37,9 +37,9 @@ def main(config):
             "test": {
                 "_target_": "src.datasets.BaseDataset",
                 "instance_transforms": config.transforms.instance_transforms.inference,
-                "segment": -1,
+                "segment": 'inference',
                 "index": [
-                    {"text": config.text, "path": "cli_input.txt", "audio_len": 0}
+                    {"text": config.text, "path": "text.txt", "audio_len": 0}
                 ],
             }
         }

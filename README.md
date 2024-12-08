@@ -63,7 +63,7 @@ python3 train.py -cn=hifigan
 ## How To Download 
 To download pretrained model, use:
 ```bash
-wget
+gdown https://drive.google.com/uc?id=1n9DVZznWy49nKiSljAbqdQvNiZ_VcPOa
 ```
 ## How To Evaluate
 To synthesize an audio from audio, your dataset should follow this structure:
@@ -98,6 +98,8 @@ To get predictions, run
 ```bash
 python3 synthesize.py -cn=from_text HYDRA_CONFIG_ARGUMENTS
 ```
+
+## Report
 
 Wandb report is available [here](https://wandb.ai/verabuylova-nes/hifigan/reports/HiFi-GAN--VmlldzoxMDUwOTI1NQ).
 

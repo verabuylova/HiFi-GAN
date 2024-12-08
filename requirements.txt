@@ -15,6 +15,7 @@ datasets
 speechbrain
 git+https://github.com/AndreevP/wvmos
 wget
+gdown
 
 black
 isort

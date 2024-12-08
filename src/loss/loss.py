@@ -48,8 +48,6 @@ class FeatureMatchingLoss(nn.Module):
     def forward(self, preds, labels):
         return sum(F.l1_loss(p, l) for pred, label in zip(preds, labels) for p, l in zip(pred, label))
 
-import torch
-
 def get_device():
     if torch.cuda.is_available():
         return torch.device("cuda")
@@ -74,27 +72,19 @@ class GenLoss(nn.Module):
         spectrogram,
         **batch,
     ):
-        # Ensure spectrogram is on the same device
         spectrogram = spectrogram.to(self.device)
-
-        # Compute Mel-spectrogram of the generated audio
         mel_output = self.mel_spectrogram(output_audio)
-
-        # Mel-spectrogram loss
         mel_loss = F.l1_loss(mel_output, spectrogram)
 
-        # Adversarial loss
         adversarial_loss = 0
         for preds in msd_pred[-1]:
             adversarial_loss += torch.mean((preds - 1) ** 2)
         for preds in mpd_pred[-1]:
             adversarial_loss += torch.mean((preds - 1) ** 2)
 
-        # Feature matching loss
         feature_loss = self.feature_matching_loss(msd_pred[:-1], msd_gt[:-1]) + \
                        self.feature_matching_loss(mpd_pred[:-1], mpd_gt[:-1])
 
-        # Total generator loss
         loss = adversarial_loss + 2 * feature_loss + 45 * mel_loss
         return {"loss": loss}
 

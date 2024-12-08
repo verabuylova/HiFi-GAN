@@ -2,4 +2,4 @@ test:
   _target_: src.datasets.CustomDirAudioDataset
   instance_transforms: ${transforms.instance_transforms.inference}
   audio_dir: /Users/vera/Desktop/hifi/HiFi-GAN/data/datasets/ljspeech/test
-  segment: -100
+  segment: 'inference'

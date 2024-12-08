@@ -30,7 +30,7 @@ class MelSpectrogramFS(nn.Module):
 
     def forward(self, input_text) -> torch.Tensor:
         mel_output, durations, pitch, energy = self.fastspeech2.encode_text(
-            input_text,
+            [input_text],
             pace=1.0,
             pitch_rate=1.0,
             energy_rate=1.0, 

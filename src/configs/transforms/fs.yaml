@@ -1,5 +1,5 @@
 defaults:
-  - instance_transforms: generate_spectrogram
+  - instance_transforms: fs
   - _self_
 
 # these lines are required if you do not use batch transforms

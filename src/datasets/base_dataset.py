@@ -76,14 +76,23 @@ class BaseDataset(Dataset):
         """
         data_dict = self._index[ind]
         audio_path = data_dict["path"]
-        audio = self.load_audio(audio_path) if str(audio_path).split(".")[-1] == "wav" else None
+        audio = self.load_audio(audio_path) if audio_path.endswith(".wav") else None
+
+        if audio:
+            spectrogram = self.get_spectrogram(audio)
+        else:
+            spectrogram = self.get_spectrogram(text)
+            
+        if self.segment != 'inference':
+            length = audio.shape[1]
+            if length > self.segment:
+                l = random.randint(0, length - self.segment)
+                audio = audio[:, l : l + self.segment]
+            else:
+                audio= torch.nn.functional.pad(audio, (0, self.segment - length))
+
         text = data_dict["text"]
         
-        spectrogram = (
-            self.get_spectrogram(audio)
-            if audio is not None
-            else self.get_spectrogram([text])
-        )
 
         instance_data = {
             "audio": audio,
@@ -109,19 +118,9 @@ class BaseDataset(Dataset):
         target_sr = self.target_sr
         if sr != target_sr:
             audio_tensor = torchaudio.functional.resample(audio_tensor, sr, target_sr)
-        if self.segment > 0:
-            if audio_tensor.shape[1] > self.segment:
-                random_start = random.randint(
-                    0, audio_tensor.shape[1] - self.segment
-                )
-                audio_tensor = audio_tensor[
-                    :, random_start : random_start + self.segment
-                ]
-            else:
-                audio_tensor = torch.nn.functional.pad(
-                    audio_tensor, (0, self.segment - audio_tensor.shape[1])
-                )
+
         return audio_tensor
+
 
     def get_spectrogram(self, audio):
         """
