@@ -99,6 +99,8 @@ To get predictions, run
 python3 synthesize.py -cn=from_text HYDRA_CONFIG_ARGUMENTS
 ```
 
+Wandb report is available [here](https://wandb.ai/verabuylova-nes/hifigan/reports/HiFi-GAN--VmlldzoxMDUwOTI1NQ).
+
 ## Credits
 
 This repository is based on a [PyTorch Project Template](https://github.com/Blinorot/pytorch_project_template).

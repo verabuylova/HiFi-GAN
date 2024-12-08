@@ -11,6 +11,9 @@ from src.utils.io_utils import ROOT_PATH
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
+import torch._dynamo
+torch._dynamo.config.suppress_errors = True
+
 
 @hydra.main(version_base=None, config_path="src/configs", config_name="synthesize")
 def main(config):
@@ -57,7 +60,6 @@ def main(config):
     metrics = {"inference": []}
     for metric_config in config.metrics.get("test", []):
         metrics["inference"].append(instantiate(metric_config))
-    print(f'WV_MOS estimate for the model is {metrics}.')
 
     # save_path for model predictions
     save_path = ROOT_PATH / "data" / "saved" / config.inferencer.save_path
