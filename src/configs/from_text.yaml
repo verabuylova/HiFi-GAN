@@ -10,4 +10,4 @@ inferencer:
   device: auto # device name or "auto"
   save_path: "result" # any name here, can be a dataset name
   seed: 1
-  from_pretrained: "./saved/model_best-5.pth" # path to the pretrained model
+  from_pretrained: "/Users/vera/Desktop/hifi/HiFi-GAN/saved/model_best-5.pth" # path to the pretrained model
