@@ -98,6 +98,10 @@ To get predictions, run
 ```bash
 python3 synthesize.py -cn=from_text HYDRA_CONFIG_ARGUMENTS
 ```
+If you want to pass text from cli, run:
+```bash
+python3 synthesize.py -cn=from_cli HYDRA_CONFIG_ARGUMENTS
+```
 
 ## Report
 

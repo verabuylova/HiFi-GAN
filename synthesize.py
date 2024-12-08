@@ -32,20 +32,6 @@ def main(config):
     else:
         device = config.inferencer.device
 
-    if config.text is not None:
-        config.datasets = {
-            "test": {
-                "_target_": "src.datasets.BaseDataset",
-                "instance_transforms": config.transforms.instance_transforms.inference,
-                "segment": 'inference',
-                "index": [
-                    {"text": config.text, "path": "text.txt", "audio_len": 0}
-                ],
-            }
-        }
-
-        config.dataloader.batch_size = 1
-
     # setup data_loader instances
     # batch_transforms should be put on device
     dataloaders, batch_transforms = get_dataloaders(config, device)

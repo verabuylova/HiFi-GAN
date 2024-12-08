@@ -78,13 +78,12 @@ class BaseDataset(Dataset):
         data_dict = self._index[ind]
         audio_path = data_dict["path"]
         audio = self.load_audio(audio_path) if audio_path.endswith(".wav") else None
+        text = data_dict["text"]
 
         if audio is not None:
             spectrogram = self.get_spectrogram(audio)
         else:
-            spectrogram = self.get_spectrogram(text)
-
-        text = data_dict["text"]
+            spectrogram = self.get_spectrogram([text])
 
         instance_data = {
             "audio": audio,
