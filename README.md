@@ -80,9 +80,7 @@ NameOfTheDirectoryWithUtterances
 
 To get predictions, run
 ```bash
-python3 synthesize.py -cn=from_audio \
-'+datasets.test.audio_dir=<PATH-TO-DIR>' \
-'inferencer.from_pretrained=<PATH-TO-PRETRAINED-MODEL>'
+python3 synthesize.py -cn=from_audio '+datasets.test.audio_dir=<PATH-TO-DIR>' 'inferencer.from_pretrained=<PATH-TO-PRETRAINED-MODEL>'
 ```
 
 To synthesize an audio from text, your dataset should follow this structure:
@@ -98,15 +96,11 @@ NameOfTheDirectoryWithUtterances
 ```
 To get predictions, run
 ```bash
-python3 synthesize.py -cn=from_text \
-'+datasets.test.data_dir=<PATH-TO-DIR>' \
-'inferencer.from_pretrained=<PATH-TO-PRETRAINED-MODEL>'
+python3 synthesize.py -cn=from_text '+datasets.test.data_dir=<PATH-TO-DIR>' 'inferencer.from_pretrained=<PATH-TO-PRETRAINED-MODEL>'
 ```
 If you want to pass text from cli, run:
 ```bash
-python3 synthesize.py -cn=from_cli \
-'+datasets.test.index=[{text: "<YOUR-TEXT>", path: "text.txt", audio_len: 0}]' \
-'inferencer.from_pretrained=<PATH-TO-PRETRAINED-MODEL>'
+python3 synthesize.py -cn=from_cli '+datasets.test.index=[{text: "<YOUR-TEXT>", path: "text.txt", audio_len: 0}]' 'inferencer.from_pretrained=<PATH-TO-PRETRAINED-MODEL>'
 
 ```
 
