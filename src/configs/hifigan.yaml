@@ -9,12 +9,12 @@ defaults:
   - _self_
 optimizer:
   _target_: torch.optim.AdamW
-  lr: 1e-4
+  lr: 2e-4
   betas: [0.8, 0.99]
   weight_decay: 0.01
 lr_scheduler:
   _target_: torch.optim.lr_scheduler.ExponentialLR
-  gamma: 0.9999
+  gamma: 0.999
 loss_function:
   _target_: src.loss.GenLoss
 d_loss_function:
