@@ -80,7 +80,7 @@ NameOfTheDirectoryWithUtterances
 
 To get predictions, run
 ```bash
-python3 synthesize.py -cn=from_audio HYDRA_CONFIG_ARGUMENTS
+python3 synthesize.py -cn=from_audio
 ```
 
 To synthesize an audio from text, your dataset should follow this structure:
@@ -96,11 +96,11 @@ NameOfTheDirectoryWithUtterances
 ```
 To get predictions, run
 ```bash
-python3 synthesize.py -cn=from_text HYDRA_CONFIG_ARGUMENTS
+python3 synthesize.py -cn=from_text
 ```
 If you want to pass text from cli, run:
 ```bash
-python3 synthesize.py -cn=from_cli HYDRA_CONFIG_ARGUMENTS
+python3 synthesize.py -cn=from_cli '+datasets.test.index=[{text: "<YOUR-TEXT>", path: "text.txt", audio_len: 0}]'
 ```
 
 ## Report
