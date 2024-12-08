@@ -1,4 +1,0 @@
-test:
-  _target_: src.datasets.LJspeechDataset
-  part: "test"
-  instance_transforms: ${transforms.instance_transforms.inference}

@@ -13,6 +13,8 @@ hydra-core
 transformers
 datasets
 speechbrain
+nltk
+g2p-en
 
 black
 isort

@@ -10,7 +10,7 @@ class CustomDirAudioDataset(BaseDataset):
             entry = {}
             if path.suffix in [".mp3", ".wav", ".flac", ".m4a"]:
                 entry["path"] = str(path)
-                entry["text"] = None
+                entry["text"] = 'h'
                 entry["audio_len"] = 0
             if len(entry) > 0:
                 data.append(entry)

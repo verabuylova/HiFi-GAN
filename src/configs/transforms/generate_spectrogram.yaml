@@ -1,5 +1,5 @@
 defaults:
-  - instance_transforms: fastspeech
+  - instance_transforms: generate_spectrogram
   - _self_
 
 # these lines are required if you do not use batch transforms

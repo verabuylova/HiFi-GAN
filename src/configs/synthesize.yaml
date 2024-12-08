@@ -1,0 +1,13 @@
+defaults:
+  - generator: hifigan
+  - metrics: example
+  - datasets: text # we do not want to run inference on training data
+  - dataloader: example
+  - transforms: generate_spectrogram
+  - _self_
+inferencer:
+  device_tensors: ["spectrogram"] # which tensors should be on device (ex. GPU)
+  device: auto # device name or "auto"
+  save_path: "texts_df" # any name here, can be a dataset name
+  seed: 1
+  from_pretrained: "./saved/model_best-5.pth" # path to the pretrained model
