@@ -3,4 +3,3 @@ inference:
     _target_: src.transforms.MelSpectrogramFS
     config:
       _target_: src.transforms.MelSpectrogramFSConfig
-    normalize_audio: True

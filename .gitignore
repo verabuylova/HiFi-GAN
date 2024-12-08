@@ -107,8 +107,10 @@ saved/
 wandb/
 .cometml-runs/
 outputs/
+pretrained_models/
 
 # editor, os cache directory
 .vscode/
 .idea/
 __MACOSX/
+

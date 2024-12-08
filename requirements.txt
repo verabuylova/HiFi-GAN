@@ -15,6 +15,7 @@ datasets
 speechbrain
 nltk
 g2p-en
+git+https://github.com/AndreevP/wvmos
 
 black
 isort

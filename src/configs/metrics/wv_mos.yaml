@@ -1,0 +1,5 @@
+device: "auto"
+test: # metrics that are calculated during inference (eval)
+  - _target_: src.metrics.WV_MOS_Metric
+    name: "WV_MOS"
+    audio_paths: /Users/vera/Desktop/hifi/HiFi-GAN/data/saved/kaledin/test

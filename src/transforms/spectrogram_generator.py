@@ -20,10 +20,9 @@ class MelSpectrogramFSConfig:
 
 
 class MelSpectrogramFS(nn.Module):
-    def __init__(self, config: MelSpectrogramFSConfig, normalize_audio: bool = False):
+    def __init__(self, config: MelSpectrogramFSConfig):
         super().__init__()
         self.config = config
-        self.normalize_audio = normalize_audio
         self.fastspeech2 = FastSpeech2.from_hparams(
             source="speechbrain/tts-fastspeech2-ljspeech", savedir="pretrained_models/tts-fastspeech2-ljspeech"
         )

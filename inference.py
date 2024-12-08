@@ -29,6 +29,20 @@ def main(config):
     else:
         device = config.inferencer.device
 
+    if config.text is not None:
+        config.datasets = {
+            "test": {
+                "_target_": "src.datasets.BaseDataset",
+                "instance_transforms": config.transforms.instance_transforms.inference,
+                "segment": -1,
+                "index": [
+                    {"text": config.text, "path": "cli_input.txt", "audio_len": 0}
+                ],
+            }
+        }
+
+        config.dataloader.batch_size = 1
+
     # setup data_loader instances
     # batch_transforms should be put on device
     dataloaders, batch_transforms = get_dataloaders(config, device)
@@ -41,8 +55,9 @@ def main(config):
 
     # get metrics
     metrics = {"inference": []}
-    for metric_config in config.metrics.get("inference", []):
+    for metric_config in config.metrics.get("test", []):
         metrics["inference"].append(instantiate(metric_config))
+    print(f'WV_MOS estimate for the model is {metrics}.')
 
     # save_path for model predictions
     save_path = ROOT_PATH / "data" / "saved" / config.inferencer.save_path
