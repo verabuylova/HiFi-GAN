@@ -8,7 +8,8 @@ from torch.utils.data import Dataset
 
 logger = logging.getLogger(__name__)
 
-logging.getLogger('speechbrain').setLevel(logging.WARNING)
+logging.getLogger("speechbrain").setLevel(logging.WARNING)
+
 
 class BaseDataset(Dataset):
     """
@@ -78,21 +79,12 @@ class BaseDataset(Dataset):
         audio_path = data_dict["path"]
         audio = self.load_audio(audio_path) if audio_path.endswith(".wav") else None
 
-        if audio:
+        if audio is not None:
             spectrogram = self.get_spectrogram(audio)
         else:
             spectrogram = self.get_spectrogram(text)
-            
-        if self.segment != 'inference':
-            length = audio.shape[1]
-            if length > self.segment:
-                l = random.randint(0, length - self.segment)
-                audio = audio[:, l : l + self.segment]
-            else:
-                audio= torch.nn.functional.pad(audio, (0, self.segment - length))
 
         text = data_dict["text"]
-        
 
         instance_data = {
             "audio": audio,
@@ -102,7 +94,7 @@ class BaseDataset(Dataset):
         }
         for key, value in instance_data.items():
             if isinstance(value, torch.Tensor):
-                assert value.device.type == 'cpu', f"{key} is on {value.device.type}"
+                assert value.device.type == "cpu", f"{key} is on {value.device.type}"
 
         return instance_data
 
@@ -118,9 +110,16 @@ class BaseDataset(Dataset):
         target_sr = self.target_sr
         if sr != target_sr:
             audio_tensor = torchaudio.functional.resample(audio_tensor, sr, target_sr)
-
+        if self.segment != "inference":
+            length = audio_tensor.shape[1]
+            if length <= self.segment:
+                audio_tensor = torch.nn.functional.pad(
+                    audio_tensor, (0, self.segment - length)
+                )
+            else:
+                l = random.randint(0, length - self.segment)
+                audio_tensor = audio_tensor[:, l : l + self.segment]
         return audio_tensor
-
 
     def get_spectrogram(self, audio):
         """

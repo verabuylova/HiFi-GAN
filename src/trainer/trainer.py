@@ -8,6 +8,7 @@ from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
 from src.transforms import MelSpectrogram, MelSpectrogramConfig
 
+
 class Trainer(BaseTrainer):
     def process_batch(self, batch, metrics: MetricTracker):
         batch = self.move_batch_to_device(batch)
@@ -53,9 +54,8 @@ class Trainer(BaseTrainer):
 
         for met in metric_funcs:
             metrics.update(met.name, met(**batch))
-        
-        return batch
 
+        return batch
 
     def _log_batch(self, batch_idx, batch, mode="train"):
         """
@@ -91,16 +91,14 @@ class Trainer(BaseTrainer):
         self.writer.add_image("pred", plot_spectrogram(output_spectrogram))
 
     def log_audio(self, audio, audio_name):
-
         audio = (audio / torch.max(torch.abs(audio))).detach().cpu()
         self.writer.add_audio(
             audio_name,
             audio.float(),
-            sample_rate=self.config.writer.audio_sample_rate,
+            sample_rate=22050,
         )
 
     def log_predictions(self, output_audio, audio, examples_to_log=1, **batch):
         for i, (pred, gt) in enumerate(zip(output_audio, audio)):
             self.log_audio(pred, f"pred_{i}")
             self.log_audio(gt, f"gt_{i}")
-
